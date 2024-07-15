@@ -12,3 +12,35 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Protein {
+  id              String           @id
+  name            String
+  alias           String
+  source          String?
+  fast_sequence   String?
+  EnrichmentTerms EnrichmentTerm[]
+  LinksAsProtein1 ProteinLink[]    @relation("Protein1")
+  LinksAsProtein2 ProteinLink[]    @relation("Protein2")
+}
+
+model EnrichmentTerm {
+  id          Int     @id @default(autoincrement())
+  protein     Protein @relation(fields: [proteinId], references: [id])
+  proteinId   String
+  category    String
+  term        String
+  description String?
+
+  @@unique([proteinId, category, term])
+}
+
+model ProteinLink {
+  id         Int     @id @default(autoincrement())
+  protein1   Protein @relation("Protein1", fields: [protein1Id], references: [id])
+  protein1Id String
+  protein2   Protein @relation("Protein2", fields: [protein2Id], references: [id])
+  protein2Id String
+
+  @@unique([protein1Id, protein2Id])
+}
