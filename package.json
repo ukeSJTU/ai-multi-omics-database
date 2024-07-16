@@ -6,15 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "load-data": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' ./prisma/import-data.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.16.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
     "csv-parse": "^5.5.6",
     "fs-extra": "^11.2.0",
+    "lucide-react": "^0.408.0",
     "next": "14.2.5",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "tailwind-merge": "^2.4.0",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
