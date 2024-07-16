@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import { useState, useCallback, useEffect } from 'react';
 import { debounce } from 'lodash';
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Fuse from 'fuse.js';
 
 type Protein = {
@@ -15,29 +15,12 @@ type Protein = {
   alias: string;
 };
 
-export default function SearchPage() {
+export default function HomePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Protein[]>([]);
 
-  useEffect(() => {
-    // Check URL params for search term
-    const termFromUrl = searchParams.get('term');
-    if (termFromUrl) {
-      setSearchTerm(termFromUrl);
-      performSearch(termFromUrl);
-    } else {
-      // Check sessionStorage for search term
-      const storedTerm = sessionStorage.getItem('lastSearchTerm');
-      if (storedTerm) {
-        setSearchTerm(storedTerm);
-        performSearch(storedTerm);
-      }
-    }
-  }, []);
-
-  const performSearch = useCallback(debounce(async (term: string) => {
+  const performSearch = useCallback(async (term: string) => {
     if (term.length < 2) {
       setSearchResults([]);
       return;
@@ -47,7 +30,9 @@ export default function SearchPage() {
     router.push(`/?term=${encodeURIComponent(term)}`, { scroll: false });
 
     // Store search term in sessionStorage
-    sessionStorage.setItem('lastSearchTerm', term);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('lastSearchTerm', term);
+    }
 
     const response = await fetch(`/api/search?term=${encodeURIComponent(term)}`);
     if (!response.ok) {
@@ -65,12 +50,33 @@ export default function SearchPage() {
 
     const fuzzyResults = fuse.search(term).map(result => result.item);
     setSearchResults(fuzzyResults);
-  }, 300), [router]);
+  }, [router]);
+
+  const debouncedSearch = useCallback(debounce(performSearch, 300), [performSearch]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Check URL params for search term
+      const urlParams = new URLSearchParams(window.location.search);
+      const termFromUrl = urlParams.get('term');
+      if (termFromUrl) {
+        setSearchTerm(termFromUrl);
+        performSearch(termFromUrl);
+      } else {
+        // Check sessionStorage for search term
+        const storedTerm = sessionStorage.getItem('lastSearchTerm');
+        if (storedTerm) {
+          setSearchTerm(storedTerm);
+          performSearch(storedTerm);
+        }
+      }
+    }
+  }, [performSearch]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    performSearch(term);
+    debouncedSearch(term);
   };
 
   return (
