@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import ProteinInfoCard from '@/components/ProteinInfoCard';
 import LinkedProteinsTable from '@/components/LinkedProteinsTable';
+import ProteinViewer from '@/components/ProteinViewer';
 
 async function getProtein(slug: string, page: number, pageSize: number, sortBy: string, sortOrder: 'asc' | 'desc') {
   const res = await fetch(
@@ -44,6 +45,8 @@ export default function ProteinPage({ params }: { params: { slug: string } }) {
   return (
     <div className="container mx-auto p-4">
       <ProteinInfoCard protein={protein} />
+      <h2 className="text-2xl font-bold mt-8 mb-4">Protein Structure</h2>
+      <ProteinViewer pdbId={params.slug} />
       <h2 className="text-2xl font-bold mt-8 mb-4">Linked Proteins</h2>
       <LinkedProteinsTable
         links={protein.ProteinLinks}
