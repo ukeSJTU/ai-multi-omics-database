@@ -14,6 +14,7 @@
     "@radix-ui/react-hover-card": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.0",
     "@tanstack/react-table": "^8.19.3",
+    "3dmol": "^2.2.1-post1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "csv-parse": "^5.5.6",
