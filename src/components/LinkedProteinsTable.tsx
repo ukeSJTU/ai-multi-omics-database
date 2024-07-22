@@ -54,7 +54,7 @@ export default function LinkedProteinsTable({
       ),
       accessorKey: 'linkedProteinId',
       cell: ({ row }) => (
-        <Link href={`/${row.original.linkedProteinId}`} className="text-blue-500 hover:underline">
+        <Link href={`/protein/${row.original.linkedProteinId}`} className="text-blue-500 hover:underline">
           {row.original.linkedProteinId}
         </Link>
       ),

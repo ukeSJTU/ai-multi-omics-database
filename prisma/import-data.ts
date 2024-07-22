@@ -73,12 +73,13 @@ async function importProteinLinks() {
     }
     
     const values = line.split(' ');
-    const [protein1Id, protein2Id] = values;
+    const [protein1Id, protein2Id, ...features] = values;
+    const combinedScore = parseInt(features[features.length - 1], 10);
 
     await prisma.proteinLink.createMany({
       data: [
-        { proteinId: protein1Id, linkedProteinId: protein2Id },
-        { proteinId: protein2Id, linkedProteinId: protein1Id }
+        { proteinId: protein1Id, linkedProteinId: protein2Id, score: combinedScore },
+        { proteinId: protein2Id, linkedProteinId: protein1Id, score: combinedScore }
       ],
       skipDuplicates: true
     });

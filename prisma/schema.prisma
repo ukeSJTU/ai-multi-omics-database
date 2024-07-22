@@ -40,6 +40,7 @@ model ProteinLink {
   protein         Protein @relation(fields: [proteinId], references: [id])
   proteinId       String
   linkedProteinId String
+  score           Int?    @default(0)
 
   @@unique([proteinId, linkedProteinId])
 }
