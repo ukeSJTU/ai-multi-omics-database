@@ -8,12 +8,16 @@ const prisma = new PrismaClient();
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const PROTEIN_INFO_FILENAME = '9606.protein.info.v12.0.txt';
 const PROTEIN_ENRICHMENT_TERM_FILENAME = '9606.protein.enrichment.terms.v12.0.txt';
+const FASTA_FILENAME = '9606.protein.sequences.v12.0.fa';
 const PROTEIN_NETWORK_FILENAME = '9606.protein.links.full.v12.0.txt';
 
 async function importProteinInfo() {
   console.log('Importing protein info...');
-  const filePath = path.join(DATA_DIR, PROTEIN_INFO_FILENAME);
-  const fileStream = fs.createReadStream(filePath);
+  // const filePath = path.join(DATA_DIR, PROTEIN_INFO_FILENAME);
+  const proteinInfoPath = path.join(DATA_DIR, PROTEIN_INFO_FILENAME);
+  const fastaPath = path.join(DATA_DIR, FASTA_FILENAME);
+  // First, import basic protein info
+  const fileStream = fs.createReadStream(proteinInfoPath);
   const rl = readline.createInterface({
     input: fileStream,
     crlfDelay: Infinity
@@ -25,13 +29,97 @@ async function importProteinInfo() {
     const [id, name, proteinSize, annotation] = line.split('\t');
     await prisma.protein.upsert({
       where: { id },
-      update: { name, alias: name, size: proteinSize, annotation: annotation, fast_sequence: null },
-      create: { id, name, alias: name, size: proteinSize, annotation: annotation, fast_sequence: null }
+      update: { 
+        name, 
+        alias: name, 
+        size: proteinSize, 
+        annotation: annotation, 
+        fasta_sequence: null 
+      },
+      create: { 
+        id, 
+        name, 
+        alias: name, 
+        size: proteinSize, 
+        annotation: annotation, 
+        fasta_sequence: null 
+      }
     });
     count++;
     if (count % 1000 === 0) console.log(`Imported ${count} proteins`);
   }
   console.log(`Finished importing ${count} proteins`);
+
+  // Now, import FASTA sequences
+  // ... (previous code remains the same)
+
+console.log('Importing FASTA sequences...');
+const fastaStream = fs.createReadStream(fastaPath);
+const fastaRl = readline.createInterface({
+  input: fastaStream,
+  crlfDelay: Infinity
+});
+
+let currentId = '';
+let currentSequence = '';
+let fastaCount = 0;
+let mismatchCount = 0;
+
+for await (const line of fastaRl) {
+  if (line.startsWith('>')) {
+    // If we have a previous sequence, save it
+    if (currentId && currentSequence) {
+      try {
+        await prisma.protein.upsert({
+          where: { id: currentId },
+          update: { fasta_sequence: currentSequence },
+          create: {
+            id: currentId,
+            name: `Unknown protein ${currentId}`,
+            alias: `Unknown protein ${currentId}`,
+            fasta_sequence: currentSequence
+          }
+        });
+        fastaCount++;
+      } catch (error) {
+        console.error(`Error processing protein ${currentId}: ${error}`);
+        mismatchCount++;
+      }
+      
+      if (fastaCount % 1000 === 0) console.log(`Imported ${fastaCount} FASTA sequences`);
+    }
+    // Start a new sequence
+    currentId = line.slice(1); // Extract ENSP00000000233 from >9606.ENSP00000000233
+    currentSequence = '';
+  } else {
+    // Add to the current sequence
+    currentSequence += line.trim();
+  }
+}
+
+// Don't forget to save the last sequence
+if (currentId && currentSequence) {
+  try {
+    await prisma.protein.upsert({
+      where: { id: currentId },
+      update: { fasta_sequence: currentSequence },
+      create: {
+        id: currentId,
+        name: `Unknown protein ${currentId}`,
+        alias: `Unknown protein ${currentId}`,
+        fasta_sequence: currentSequence
+      }
+    });
+    fastaCount++;
+  } catch (error) {
+    console.error(`Error processing last protein ${currentId}: ${error}`);
+    mismatchCount++;
+  }
+}
+
+console.log(`Finished importing ${fastaCount} FASTA sequences`);
+console.log(`Encountered ${mismatchCount} mismatches`);
+
 }
 
 async function importEnrichmentTerms() {
@@ -78,8 +166,8 @@ async function importProteinLinks() {
 
     await prisma.proteinLink.createMany({
       data: [
-        { proteinId: protein1Id, linkedProteinId: protein2Id, score: combinedScore },
-        { proteinId: protein2Id, linkedProteinId: protein1Id, score: combinedScore }
+        { proteinId: protein1Id, linkedProteinId: protein2Id },
+        { proteinId: protein2Id, linkedProteinId: protein1Id }
       ],
       skipDuplicates: true
     });

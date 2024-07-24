@@ -19,7 +19,7 @@ model Protein {
   alias           String
   size            String?
   annotation      String?
-  fast_sequence   String?
+  fasta_sequence  String?
   EnrichmentTerms EnrichmentTerm[]
   ProteinLinks    ProteinLink[]
 }
@@ -40,7 +40,6 @@ model ProteinLink {
   protein         Protein @relation(fields: [proteinId], references: [id])
   proteinId       String
   linkedProteinId String
-  score           Int?    @default(0)
 
   @@unique([proteinId, linkedProteinId])
 }
