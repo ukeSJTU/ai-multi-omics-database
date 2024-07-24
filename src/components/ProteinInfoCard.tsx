@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Copy } from "lucide-react";
 
 type EnrichmentTerm = {
   id: number;
@@ -25,6 +27,7 @@ type ProteinInfoProps = {
 
 export default function ProteinInfoCard({ protein }: { protein: ProteinInfoProps }) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [isHovering, setIsHovering] = useState(false);
 
   const groupedTerms = protein.EnrichmentTerms.reduce((acc, term) => {
     if (!acc[term.category]) {
@@ -33,6 +36,15 @@ export default function ProteinInfoCard({ protein }: { protein: ProteinInfoProps
     acc[term.category].push(term);
     return acc;
   }, {} as Record<string, EnrichmentTerm[]>);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      // Optionally, you can add some feedback here, like a toast notification
+      console.log('Copied to clipboard');
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+    });
+  };
 
   return (
     <Card className="mb-8">
@@ -47,10 +59,24 @@ export default function ProteinInfoCard({ protein }: { protein: ProteinInfoProps
         {protein.fasta_sequence && (
           <div className="mt-4">
             <h3 className="text-lg font-semibold mb-2">FASTA Sequence:</h3>
-            <div className="bg-gray-100 p-4 rounded-md overflow-hidden">
-              <p className="font-mono text-sm overflow-x-scroll" >
+            <div 
+              className="bg-gray-100 p-4 rounded-md overflow-hidden relative"
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+            >
+              <p className="font-mono text-sm overflow-x-scroll">
                 {protein.fasta_sequence}
               </p>
+              <Button 
+                onClick={() => copyToClipboard(protein.fasta_sequence || '')}
+                size="icon"
+                variant="ghost"
+                className={`absolute top-2 right-2 transition-opacity duration-100 ease-in-out ${
+                  isHovering ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}
