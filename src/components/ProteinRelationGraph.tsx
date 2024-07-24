@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ForceGraph2D, ForceGraph3D } from "react-force-graph";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
@@ -69,19 +69,32 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     setOrbitSpeed(value[0]);
   };
 
+  // Focus on click functionality
+  const handleClick = useCallback(
+    (node: any) => {
+      if (focusOnClick && mode === "3d" && graphRef.current) {
+        const distance = 40;
+        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+        graphRef.current.cameraPosition(
+          {
+            x: node.x * distRatio,
+            y: node.y * distRatio,
+            z: node.z * distRatio,
+          },
+          node,
+          3000
+        );
+      }
+    },
+    [focusOnClick, mode]
+  );
+
   useEffect(() => {
     const updateDimensions = () => {
       if (graphContainerRef.current) {
-        const containerWidth = graphContainerRef.current.clientWidth;
-        const containerHeight = graphContainerRef.current.clientHeight;
-        setDimensions({
-          width: Math.min(containerWidth, 600), // Limit max width to 600px
-          height: Math.min(containerHeight, 400), // Limit max height to 400px
-        });
-      }
-
-      if (graphRef.current) {
-        graphRef.current.zoomToFit();
+        const { width, height } =
+          graphContainerRef.current.getBoundingClientRect();
+        setDimensions({ width, height });
       }
     };
 
@@ -91,7 +104,28 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  const GraphComponent = mode === "3d" ? ForceGraph3D : ForceGraph2D;
+  useEffect(() => {
+    if (graphRef.current) {
+      // Camera orbit functionality (3D only)
+      let orbitInterval: NodeJS.Timeout | null = null;
+      if (cameraOrbit && mode === "3d") {
+        const distance = 1400;
+        let angle = 0;
+        orbitInterval = setInterval(() => {
+          graphRef.current.cameraPosition({
+            x: distance * Math.sin(angle),
+            z: distance * Math.cos(angle),
+          });
+          angle += (Math.PI / 300) * orbitSpeed;
+        }, 10);
+      }
+
+      // Cleanup function
+      return () => {
+        if (orbitInterval) clearInterval(orbitInterval);
+      };
+    }
+  }, [cameraOrbit, mode, orbitSpeed]);
 
   return (
     <div className="flex flex-col h-[400px]">
@@ -192,16 +226,38 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
             height: `${dimensions.height}px`,
           }}
         >
-          <GraphComponent
-            ref={graphRef}
-            width={dimensions.width}
-            height={dimensions.height}
-            backgroundColor="#f9f9f9"
-            graphData={mockData}
-            nodeLabel={showLabels ? "name" : undefined}
-            nodeAutoColorBy="id"
-            linkWidth={1}
-          />
+          {mode === "2d" ? (
+            <ForceGraph2D
+              ref={graphRef}
+              width={dimensions.width}
+              height={dimensions.height}
+              backgroundColor="#f9f9f9"
+              graphData={mockData}
+              nodeLabel={showLabels ? "name" : undefined}
+              nodeAutoColorBy="id"
+              linkWidth={1}
+              linkDirectionalParticles={emitParticles ? 4 : 0}
+              linkDirectionalParticleSpeed={(d) => d.value * 0.001}
+              onNodeClick={handleClick}
+            />
+          ) : (
+            <ForceGraph3D
+              ref={graphRef}
+              width={dimensions.width}
+              height={dimensions.height}
+              backgroundColor="#f9f9f9"
+              graphData={mockData}
+              nodeLabel={showLabels ? "name" : undefined}
+              nodeAutoColorBy="id"
+              linkWidth={1}
+              linkDirectionalParticles={emitParticles ? 4 : 0}
+              linkDirectionalParticleSpeed={(d) => d.value * 0.001}
+              enableNodeDrag={!cameraOrbit}
+              enableNavigationControls={!cameraOrbit}
+              showNavInfo={!cameraOrbit}
+              onNodeClick={handleClick}
+            />
+          )}
         </div>
       </div>
     </div>
