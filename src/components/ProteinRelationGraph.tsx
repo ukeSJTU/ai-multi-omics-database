@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { ForceGraph2D, ForceGraph3D } from "react-force-graph";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Grid3X3, Box, Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Node {
   id: string;
@@ -50,6 +51,10 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     setMode(value as "2d" | "3d");
   };
 
+  const toggleMode = () => {
+    setMode((prevMode) => (prevMode === "2d" ? "3d" : "2d"));
+  };
+
   const handleLabelsToggle = (value: string) => {
     setShowLabels(value === "show");
   };
@@ -81,7 +86,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
   return (
     <div className="flex flex-col h-[400px]">
       <div className="mb-4 flex justify-between items-center">
-        <ToggleGroup
+        {/* <ToggleGroup
           type="single"
           value={mode}
           onValueChange={handleModeChange}
@@ -92,7 +97,24 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
           <ToggleGroupItem value="3d" aria-label="3D">
             <Box className="h-4 w-4" />
           </ToggleGroupItem>
-        </ToggleGroup>
+        </ToggleGroup> */}
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={toggleMode}
+            variant="outline"
+            size="icon"
+            className="relative"
+          >
+            {mode === "2d" ? (
+              <Box className="h-4 w-4" />
+            ) : (
+              <Grid3X3 className="h-4 w-4" />
+            )}
+          </Button>
+          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {mode === "2d" ? "2D Mode" : "3D Mode"}
+          </span>
+        </div>
         <ToggleGroup
           type="single"
           value={showLabels ? "show" : "hide"}
