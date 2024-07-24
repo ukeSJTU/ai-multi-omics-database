@@ -7,6 +7,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 type EnrichmentTerm = {
   id: number;
@@ -28,6 +29,7 @@ type ProteinInfoProps = {
 export default function ProteinInfoCard({ protein }: { protein: ProteinInfoProps }) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isHovering, setIsHovering] = useState(false);
+  const { toast } = useToast();
 
   const groupedTerms = protein.EnrichmentTerms.reduce((acc, term) => {
     if (!acc[term.category]) {
@@ -39,9 +41,19 @@ export default function ProteinInfoCard({ protein }: { protein: ProteinInfoProps
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      // Optionally, you can add some feedback here, like a toast notification
-      console.log('Copied to clipboard');
+      toast({
+        title: "Copied!",
+        description: "FASTA sequence copied to clipboard.",
+        variant: "default",
+        duration: 2000,
+      });
     }).catch(err => {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy FASTA sequence. Please try again.",
+        variant: "destructive",
+        duration: 2000,
+      });
       console.error('Failed to copy: ', err);
     });
   };
