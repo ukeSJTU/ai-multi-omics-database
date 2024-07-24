@@ -1,9 +1,11 @@
+// components/ProteinDetailPanel.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import ProteinInfoCard from "@/components/ProteinInfoCard";
 import LinkedProteinsTable from "@/components/LinkedProteinsTable";
 import ProteinViewer from "@/components/ProteinViewer";
+import ProteinRelationshipGraph from "./ProteinRelationGraph";
 
 async function getProtein(
   id: string,
@@ -47,11 +49,17 @@ export function ProteinDetailPanel({ proteinId }: { proteinId: string }) {
     <div className="p-4">
       <div className="space-y-8">
         <ProteinInfoCard protein={protein} />
-        <section>
+        <section className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-2xl font-bold mb-4">
+            Protein Relationship Graph
+          </h2>
+          <ProteinRelationshipGraph centerId={proteinId} topK={5} />
+        </section>
+        <section className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-2xl font-bold mb-4">Protein Structure</h2>
           <ProteinViewer pdbId={proteinId} />
         </section>
-        <section>
+        <section className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-2xl font-bold mb-4">Linked Proteins</h2>
           <LinkedProteinsTable links={protein.ProteinLinks} />
         </section>
