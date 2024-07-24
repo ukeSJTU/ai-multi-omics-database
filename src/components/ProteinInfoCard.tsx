@@ -19,7 +19,7 @@ type ProteinInfoProps = {
   alias: string;
   size: string | null;
   annotation: string | null;
-  fast_sequence: string | null;
+  fasta_sequence: string | null;
   EnrichmentTerms: EnrichmentTerm[];
 };
 
@@ -34,14 +34,6 @@ export default function ProteinInfoCard({ protein }: { protein: ProteinInfoProps
     return acc;
   }, {} as Record<string, EnrichmentTerm[]>);
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
-  };
-
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -52,12 +44,19 @@ export default function ProteinInfoCard({ protein }: { protein: ProteinInfoProps
         <p><strong>Alias:</strong> {protein.alias}</p>
         {protein.size && <p><strong>Size:</strong> {protein.size}</p>}
         {protein.annotation && <p><strong>Annotation:</strong> {protein.annotation}</p>}
-        {protein.fast_sequence && (
-          <p><strong>Fast Sequence:</strong> {protein.fast_sequence}</p>
+        {protein.fasta_sequence && (
+          <div className="mt-4">
+            <h3 className="text-lg font-semibold mb-2">FASTA Sequence:</h3>
+            <div className="bg-gray-100 p-4 rounded-md overflow-hidden">
+              <p className="font-mono text-sm overflow-x-scroll" >
+                {protein.fasta_sequence}
+              </p>
+            </div>
+          </div>
         )}
         <div className="mt-4">
           <h3 className="text-lg font-semibold mb-2">Enrichment Terms:</h3>
-          <Accordion type="single" value={expandedCategories} onValueChange={setExpandedCategories}>
+          <Accordion type="multiple" value={expandedCategories} onValueChange={setExpandedCategories}>
             {Object.entries(groupedTerms).map(([category, terms]) => (
               <AccordionItem key={category} value={category}>
                 <AccordionTrigger>{category} ({terms.length})</AccordionTrigger>
