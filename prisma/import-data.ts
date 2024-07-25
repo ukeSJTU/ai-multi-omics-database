@@ -147,7 +147,7 @@ async function importEnrichmentTerms() {
 
 async function importProteinLinks() {
   console.log("Importing protein links...");
-  const filePath = path.join(DATA_DIR, "9606.protein.links.full.v12.0.txt");
+  const filePath = path.join(DATA_DIR, PROTEIN_NETWORK_FILENAME);
   const fileStream = fs.createReadStream(filePath);
   const rl = readline.createInterface({
     input: fileStream,
@@ -167,8 +167,16 @@ async function importProteinLinks() {
 
     await prisma.proteinLink.createMany({
       data: [
-        { proteinId: protein1Id, linkedProteinId: protein2Id },
-        { proteinId: protein2Id, linkedProteinId: protein1Id },
+        {
+          proteinId: protein1Id,
+          linkedProteinId: protein2Id,
+          combined_score: combinedScore,
+        },
+        {
+          proteinId: protein2Id,
+          linkedProteinId: protein1Id,
+          combined_score: combinedScore,
+        },
       ],
       skipDuplicates: true,
     });
