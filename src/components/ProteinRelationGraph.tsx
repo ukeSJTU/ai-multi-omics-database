@@ -1,10 +1,25 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { ForceGraph2D, ForceGraph3D } from "react-force-graph";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Grid3X3, Box, Tag, Focus, Orbit, Atom } from "lucide-react";
+import {
+  Grid3X3,
+  Box,
+  Tag,
+  Focus,
+  Orbit,
+  Atom,
+  Plus,
+  Minus,
+} from "lucide-react";
 
 interface Node {
   id: string;
@@ -17,15 +32,35 @@ interface Link {
   value: number;
 }
 
+interface GraphData {
+  nodes: Node[];
+  links: Link[];
+}
+
 interface ProteinRelationshipGraphProps {
   centerId: string;
   topK: number;
 }
 
+// Mock function to generate data (replace with API call in the future)
+const generateMockData = (
+  centerId: string
+): { proteins: string[]; values: number[] } => {
+  const proteins = Array.from(
+    { length: 49 },
+    (_, i) => `9606.ENSP${String(i + 1).padStart(11, "0")}`
+  );
+  const values = Array.from({ length: 49 }, () =>
+    Math.floor(Math.random() * 1000)
+  );
+  return { proteins, values };
+};
+
 const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
   centerId,
   topK,
 }) => {
+  // State for graph visualization options
   const [mode, setMode] = useState<"2d" | "3d">("2d");
   const [showLabels, setShowLabels] = useState(true);
   const [emitParticles, setEmitParticles] = useState(false);
@@ -33,24 +68,51 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
   const [cameraOrbit, setCameraOrbit] = useState(false);
   const [orbitSpeed, setOrbitSpeed] = useState(1);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  // Refs for the graph
   const graphRef = useRef<any>();
   const graphContainerRef = useRef<HTMLDivElement>(null);
 
-  // Mock data (replace with API call in the future)
-  const mockData = {
-    nodes: [
+  // State for managing displayed nodes
+  const [displayedNodes, setDisplayedNodes] = useState(topK);
+  const [graphData, setGraphData] = useState<GraphData>({
+    nodes: [],
+    links: [],
+  });
+
+  // Memoized mock data (replace with API call in the future)
+  const mockData = useMemo(() => generateMockData(centerId), [centerId]);
+
+  // Effect to update graph data when displayedNodes changes
+  useEffect(() => {
+    // Create nodes array with center node and top K nodes
+    const nodes: Node[] = [
       { id: centerId, name: `Protein ${centerId}` },
-      { id: "ENSP00000356607", name: "Protein ENSP00000356607" },
-      { id: "ENSP00000427567", name: "Protein ENSP00000427567" },
-      { id: "ENSP00000253413", name: "Protein ENSP00000253413" },
-      { id: "ENSP00000493357", name: "Protein ENSP00000493357" },
-    ],
-    links: [
-      { source: centerId, target: "ENSP00000356607", value: 173 },
-      { source: centerId, target: "ENSP00000427567", value: 154 },
-      { source: centerId, target: "ENSP00000253413", value: 151 },
-      { source: centerId, target: "ENSP00000493357", value: 471 },
-    ],
+      ...mockData.proteins
+        .slice(0, displayedNodes - 1)
+        .map((id) => ({ id, name: `Protein ${id}` })),
+    ];
+
+    // Create links array with top K links
+    const links: Link[] = mockData.proteins
+      .slice(0, displayedNodes - 1)
+      .map((id, index) => ({
+        source: centerId,
+        target: id,
+        value: mockData.values[index],
+      }));
+
+    // Sort links by value in descending order
+    links.sort((a, b) => b.value - a.value);
+
+    setGraphData({ nodes, links });
+  }, [displayedNodes, centerId, mockData]);
+
+  // Handler for changing the number of displayed nodes
+  const handleNodeChange = (change: number) => {
+    setDisplayedNodes((prev) =>
+      Math.max(2, Math.min(prev + change, mockData.proteins.length + 1))
+    );
   };
 
   const handleModeChange = (value: string) => {
@@ -215,6 +277,38 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
             />
           </div>
         </div>
+        <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={() => handleNodeChange(-1)}
+                variant="outline"
+                size="icon"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Slider
+                value={[displayedNodes]}
+                onValueChange={(value) => setDisplayedNodes(value[0])}
+                min={2}
+                max={mockData.proteins.length + 1}
+                step={1}
+                className="w-32"
+              />
+              <Button
+                onClick={() => handleNodeChange(1)}
+                variant="outline"
+                size="icon"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <span className="text-sm text-gray-500">
+              {displayedNodes} out of {mockData.proteins.length + 1} nodes
+              displayed
+            </span>
+          </div>
+        </div>
       </div>
       <div
         className="flex-grow flex justify-center items-center"
@@ -232,7 +326,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
               width={dimensions.width}
               height={dimensions.height}
               backgroundColor="#f9f9f9"
-              graphData={mockData}
+              graphData={graphData}
               nodeLabel={showLabels ? "name" : undefined}
               nodeAutoColorBy="id"
               linkWidth={1}
@@ -246,7 +340,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
               width={dimensions.width}
               height={dimensions.height}
               backgroundColor="#f9f9f9"
-              graphData={mockData}
+              graphData={graphData}
               nodeLabel={showLabels ? "name" : undefined}
               nodeAutoColorBy="id"
               linkWidth={1}
