@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ForceGraph2D, ForceGraph3D } from "react-force-graph";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
@@ -21,40 +15,30 @@ import {
   Minus,
 } from "lucide-react";
 
+// Define the structure for a node in the graph
 interface Node {
   id: string;
   name: string;
 }
 
+// Define the structure for a link in the graph
 interface Link {
   source: string;
   target: string;
   value: number;
 }
 
+// Define the structure for the graph data
 interface GraphData {
   nodes: Node[];
   links: Link[];
 }
 
+// Define the props for the ProteinRelationshipGraph component
 interface ProteinRelationshipGraphProps {
   centerId: string;
   topK: number;
 }
-
-// Mock function to generate data (replace with API call in the future)
-const generateMockData = (
-  centerId: string
-): { proteins: string[]; values: number[] } => {
-  const proteins = Array.from(
-    { length: 49 },
-    (_, i) => `9606.ENSP${String(i + 1).padStart(11, "0")}`
-  );
-  const values = Array.from({ length: 49 }, () =>
-    Math.floor(Math.random() * 1000)
-  );
-  return { proteins, values };
-};
 
 const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
   centerId,
@@ -73,60 +57,82 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
   const graphRef = useRef<any>();
   const graphContainerRef = useRef<HTMLDivElement>(null);
 
-  // State for managing displayed nodes
+  // State for managing displayed nodes and graph data
   const [displayedNodes, setDisplayedNodes] = useState(topK);
   const [graphData, setGraphData] = useState<GraphData>({
     nodes: [],
     links: [],
   });
 
-  // Memoized mock data (replace with API call in the future)
-  const mockData = useMemo(() => generateMockData(centerId), [centerId]);
+  // State to store API data
+  const [proteinData, setProteinData] = useState<{
+    proteins: string[];
+    values: number[];
+  } | null>(null);
 
-  // Effect to update graph data when displayedNodes changes
+  // Effect to fetch data from API when centerId changes
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(
+          `/api/protein-links?proteinId=${centerId}&limit=50`
+        );
+        if (!response.ok) throw new Error("Failed to fetch");
+        const data = await response.json();
+        setProteinData(data);
+      } catch (error) {
+        console.error("Error fetching protein data:", error);
+      }
+    };
+
+    fetchData();
+  }, [centerId]);
+
+  // Effect to update graph data when displayedNodes or proteinData changes
+  useEffect(() => {
+    if (!proteinData) return;
+
     // Create nodes array with center node and top K nodes
     const nodes: Node[] = [
       { id: centerId, name: `Protein ${centerId}` },
-      ...mockData.proteins
+      ...proteinData.proteins
         .slice(0, displayedNodes - 1)
         .map((id) => ({ id, name: `Protein ${id}` })),
     ];
 
     // Create links array with top K links
-    const links: Link[] = mockData.proteins
+    const links: Link[] = proteinData.proteins
       .slice(0, displayedNodes - 1)
       .map((id, index) => ({
         source: centerId,
         target: id,
-        value: mockData.values[index],
+        value: proteinData.values[index],
       }));
 
-    // Sort links by value in descending order
-    links.sort((a, b) => b.value - a.value);
-
     setGraphData({ nodes, links });
-  }, [displayedNodes, centerId, mockData]);
+  }, [displayedNodes, centerId, proteinData]);
 
   // Handler for changing the number of displayed nodes
   const handleNodeChange = (change: number) => {
     setDisplayedNodes((prev) =>
-      Math.max(2, Math.min(prev + change, mockData.proteins.length + 1))
+      Math.max(
+        2,
+        Math.min(prev + change, (proteinData?.proteins.length || 0) + 1)
+      )
     );
   };
 
-  const handleModeChange = (value: string) => {
-    setMode(value as "2d" | "3d");
-  };
-
+  // Handler for toggling 2D/3D mode
   const toggleMode = () => {
     setMode((prevMode) => (prevMode === "2d" ? "3d" : "2d"));
   };
 
+  // Handler for toggling labels
   const handleLabelsToggle = (value: string) => {
     setShowLabels(value === "show");
   };
 
+  // Handler for changing orbit speed
   const handleOrbitSpeedChange = (value: number[]) => {
     setOrbitSpeed(value[0]);
   };
@@ -151,6 +157,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     [focusOnClick, mode]
   );
 
+  // Effect to update dimensions on window resize
   useEffect(() => {
     const updateDimensions = () => {
       if (graphContainerRef.current) {
@@ -162,36 +169,30 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
 
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
-
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
+  // Effect for camera orbit functionality (3D only)
   useEffect(() => {
-    if (graphRef.current) {
-      // Camera orbit functionality (3D only)
-      let orbitInterval: NodeJS.Timeout | null = null;
-      if (cameraOrbit && mode === "3d") {
-        const distance = 1400;
-        let angle = 0;
-        orbitInterval = setInterval(() => {
-          graphRef.current.cameraPosition({
-            x: distance * Math.sin(angle),
-            z: distance * Math.cos(angle),
-          });
-          angle += (Math.PI / 300) * orbitSpeed;
-        }, 10);
-      }
-
-      // Cleanup function
-      return () => {
-        if (orbitInterval) clearInterval(orbitInterval);
-      };
+    if (graphRef.current && cameraOrbit && mode === "3d") {
+      const distance = 1400;
+      let angle = 0;
+      const interval = setInterval(() => {
+        graphRef.current.cameraPosition({
+          x: distance * Math.sin(angle),
+          z: distance * Math.cos(angle),
+        });
+        angle += (Math.PI / 300) * orbitSpeed;
+      }, 10);
+      return () => clearInterval(interval);
     }
   }, [cameraOrbit, mode, orbitSpeed]);
 
   return (
     <div className="flex flex-col h-[400px]">
+      {/* Toolbar */}
       <div className="mb-4 space-y-2">
+        {/* 2D/3D toggle */}
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Button
@@ -210,6 +211,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
               {mode === "2d" ? "2D Mode" : "3D Mode"}
             </span>
           </div>
+          {/* Label toggle */}
           <ToggleGroup
             type="single"
             value={showLabels ? "show" : "hide"}
@@ -223,6 +225,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
+        {/* Particle and focus toggles */}
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Switch
@@ -247,6 +250,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
             </label>
           </div>
         </div>
+        {/* Camera orbit controls (3D only) */}
         <div
           className={`flex justify-between items-center ${
             mode === "2d" ? "opacity-50 pointer-events-none" : ""
@@ -277,39 +281,40 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
             />
           </div>
         </div>
+        {/* Node count controls */}
         <div className="flex justify-between items-center">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={() => handleNodeChange(-1)}
-                variant="outline"
-                size="icon"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <Slider
-                value={[displayedNodes]}
-                onValueChange={(value) => setDisplayedNodes(value[0])}
-                min={2}
-                max={mockData.proteins.length + 1}
-                step={1}
-                className="w-32"
-              />
-              <Button
-                onClick={() => handleNodeChange(1)}
-                variant="outline"
-                size="icon"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <span className="text-sm text-gray-500">
-              {displayedNodes} out of {mockData.proteins.length + 1} nodes
-              displayed
-            </span>
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => handleNodeChange(-1)}
+              variant="outline"
+              size="icon"
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <Slider
+              value={[displayedNodes]}
+              onValueChange={(value) => setDisplayedNodes(value[0])}
+              min={2}
+              max={(proteinData?.proteins.length || 0) + 1}
+              step={1}
+              className="w-32"
+            />
+            <Button
+              onClick={() => handleNodeChange(1)}
+              variant="outline"
+              size="icon"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
+          <span className="text-sm text-gray-500">
+            {displayedNodes} out of {(proteinData?.proteins.length || 0) + 1}{" "}
+            nodes displayed
+          </span>
         </div>
       </div>
+
+      {/* Graph container */}
       <div
         className="flex-grow flex justify-center items-center"
         ref={graphContainerRef}
@@ -331,7 +336,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
               nodeAutoColorBy="id"
               linkWidth={1}
               linkDirectionalParticles={emitParticles ? 4 : 0}
-              linkDirectionalParticleSpeed={(d) => d.value * 0.001}
+              linkDirectionalParticleSpeed={(d: any) => d.value * 0.001}
               onNodeClick={handleClick}
             />
           ) : (
@@ -345,7 +350,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
               nodeAutoColorBy="id"
               linkWidth={1}
               linkDirectionalParticles={emitParticles ? 4 : 0}
-              linkDirectionalParticleSpeed={(d) => d.value * 0.001}
+              linkDirectionalParticleSpeed={(d: any) => d.value * 0.001}
               enableNodeDrag={!cameraOrbit}
               enableNavigationControls={!cameraOrbit}
               showNavInfo={!cameraOrbit}
