@@ -14,6 +14,8 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
+import * as THREE from "three";
+import SpriteText from "three-spritetext";
 
 // Define the structure for a node in the graph
 interface Node {
@@ -132,6 +134,10 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     setShowLabels(value === "show");
   };
 
+  const toggleLabels = () => {
+    setShowLabels((prev) => !prev);
+  };
+
   // Handler for changing orbit speed
   const handleOrbitSpeedChange = (value: number[]) => {
     setOrbitSpeed(value[0]);
@@ -175,7 +181,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
   // Effect for camera orbit functionality (3D only)
   useEffect(() => {
     if (graphRef.current && cameraOrbit && mode === "3d") {
-      const distance = 1400;
+      const distance = 120;
       let angle = 0;
       const interval = setInterval(() => {
         graphRef.current.cameraPosition({
@@ -187,6 +193,80 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
       return () => clearInterval(interval);
     }
   }, [cameraOrbit, mode, orbitSpeed]);
+
+  const nodeSize = 50;
+
+  const node2D = useCallback(
+    (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+      const size = nodeSize / globalScale;
+      const x = node.x - size / 2;
+      const y = node.y - size / 2;
+
+      // Draw circular background
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, size / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = `${node.color}33`; // Light version of node color
+      ctx.fill();
+
+      // Draw border
+      ctx.strokeStyle = node.color;
+      ctx.lineWidth = 2 / globalScale;
+      ctx.stroke();
+
+      // Load and draw the image
+      const img = new Image(size, size);
+      img.src = "/img/1A00.png"; // Replace with correct image path later
+      ctx.save();
+      ctx.clip();
+      ctx.drawImage(img, x, y, size, size);
+      ctx.restore();
+
+      // Draw label if needed
+      if (showLabels) {
+        const label = node.name;
+        ctx.font = `${12 / globalScale}px Sans-Serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillStyle = node.color;
+        ctx.fillText(label, node.x, node.y + size / 2 + 2 / globalScale);
+      }
+    },
+    [showLabels, nodeSize]
+  );
+
+  const node3D = useCallback(
+    (node: any) => {
+      const group = new THREE.Group();
+
+      // Create sprite for the image
+      const texture = new THREE.TextureLoader().load("/img/1A00.png"); // Replace with correct image path later
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(nodeSize, nodeSize, 1);
+      group.add(sprite);
+
+      // Create circular background
+      const bgGeometry = new THREE.CircleGeometry(nodeSize / 2, 32);
+      const bgMaterial = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(node.color).setHex(0x333333),
+      });
+      const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
+      bgMesh.position.set(0, 0, -1); // Place it behind the sprite
+      group.add(bgMesh);
+
+      // Add label if needed
+      if (showLabels) {
+        const label = new SpriteText(node.name);
+        label.color = node.color;
+        label.textHeight = 8;
+        // label.position.set(0, -nodeSize / 2 - 5, 0);
+        group.add(label);
+      }
+
+      return group;
+    },
+    [showLabels, nodeSize]
+  );
 
   return (
     <div className="flex flex-col h-[400px]">
@@ -212,18 +292,19 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
             </span>
           </div>
           {/* Label toggle */}
-          <ToggleGroup
-            type="single"
-            value={showLabels ? "show" : "hide"}
-            onValueChange={(value) => setShowLabels(value === "show")}
-          >
-            <ToggleGroupItem value="show" aria-label="Show Labels">
-              <Tag className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="hide" aria-label="Hide Labels">
-              <Tag className="h-4 w-4 opacity-50" />
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={toggleLabels}
+              variant="outline"
+              size="icon"
+              className="relative"
+            >
+              <Tag className={`h-4 w-4 ${showLabels ? "" : "opacity-50"}`} />
+            </Button>
+            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              {showLabels ? "Labels On" : "Labels Off"}
+            </span>
+          </div>
         </div>
         {/* Particle and focus toggles */}
         <div className="flex justify-between items-center">
@@ -338,6 +419,13 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
               linkDirectionalParticles={emitParticles ? 4 : 0}
               linkDirectionalParticleSpeed={(d: any) => d.value * 0.001}
               onNodeClick={handleClick}
+              nodeCanvasObject={node2D}
+              nodePointerAreaPaint={(node, color, ctx) => {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, nodeSize / 2, 0, 2 * Math.PI);
+                ctx.fill();
+              }}
             />
           ) : (
             <ForceGraph3D
@@ -355,6 +443,8 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
               enableNavigationControls={!cameraOrbit}
               showNavInfo={!cameraOrbit}
               onNodeClick={handleClick}
+              nodeThreeObject={node3D}
+              nodeThreeObjectExtend={false}
             />
           )}
         </div>
