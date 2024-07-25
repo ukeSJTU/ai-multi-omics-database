@@ -16,7 +16,7 @@ export default function Page({ params }: { params: { slug: string } }) {
           <SearchPanel />
         </div>
       </ResizablePanel>
-      <ResizableHandle />
+      <ResizableHandle withHandle />
       <ResizablePanel defaultSize={60} minSize={30}>
         <div className="h-screen overflow-auto">
           <ProteinDetailPanel proteinId={params.slug} />
