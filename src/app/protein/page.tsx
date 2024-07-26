@@ -1,38 +1,68 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
+import { Search, Database, Network, Box } from "lucide-react";
+
 const DefaultRightPanel = () => {
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">
-        Welcome to the Protein Explorer
-      </h2>
-      <p className="mb-4">
-        This website allows you to explore and analyze protein structures and
-        relationships. Here's how to use it:
-      </p>
-      <ol className="list-decimal list-inside space-y-2">
-        <li>
-          Use the search panel on the left to find proteins by name, ID, or
-          keywords.
-        </li>
-        <li>
-          Click on a protein in the search results to view its details in this
-          panel.
-        </li>
-        <li>
-          Explore the protein's structure, sequence, and related information.
-        </li>
-        <li>
-          Use the relationship graph to discover connections between proteins.
-        </li>
-        <li>
-          Adjust visualization settings to customize your view of the protein
-          structures.
-        </li>
-      </ol>
-      <p className="mt-4">
-        Get started by searching for a protein in the left panel!
-      </p>
+    <div className="flex items-center justify-center h-full">
+      <div className="p-8 max-w-3xl">
+        <h2 className="text-3xl font-bold mb-6 text-center">
+          Welcome to the Protein Explorer
+        </h2>
+        <p className="mb-6 text-lg text-center text-gray-600">
+          Discover, analyze, and visualize protein structures and relationships
+          with ease.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <FeatureCard
+            icon={<Search className="h-8 w-8 text-blue-500" />}
+            title="Search"
+            description="Find proteins by name, ID, or keywords using the left panel."
+          />
+          <FeatureCard
+            icon={<Database className="h-8 w-8 text-green-500" />}
+            title="Basic Info"
+            description="View comprehensive details about each protein."
+          />
+          <FeatureCard
+            icon={<Network className="h-8 w-8 text-purple-500" />}
+            title="Relationship Graph"
+            description="Explore connections between proteins visually."
+          />
+          <FeatureCard
+            icon={<Box className="h-8 w-8 text-orange-500" />}
+            title="3D Structure"
+            description="Interact with 3D models of protein structures."
+          />
+        </div>
+        <div className="text-center">
+          <a
+            href="#"
+            className="inline-flex items-center group text-lg font-semibold text-black hover:text-gray-700 transition-colors"
+          >
+            <span className="bg-black text-white p-3 rounded-full mr-4 group-hover:bg-gray-800 transition-colors">
+              <ArrowLeft className="h-8 w-8" />
+            </span>
+            <span className="relative">
+              Start searching
+              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-black transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+            </span>
+          </a>
+        </div>
+      </div>
     </div>
   );
 };
+
+// eslint-disable-next-line
+const FeatureCard = ({ icon, title, description }) => (
+  <Card>
+    <CardContent className="flex flex-col items-center p-6">
+      {icon}
+      <h3 className="text-xl font-semibold mt-4 mb-2">{title}</h3>
+      <p className="text-center text-gray-600">{description}</p>
+    </CardContent>
+  </Card>
+);
 
 export default DefaultRightPanel;
