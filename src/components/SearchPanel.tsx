@@ -21,14 +21,15 @@ export function SearchPanel() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get("term") || "");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleSearch = async (term: string) => {
     setIsLoading(true);
+    setHasSearched(true);
     const results = await searchProteins(term);
     setSearchResults(results);
     setIsLoading(false);
 
-    // Update URL with the search term without refreshing the page
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.set("term", term);
     router.replace(`?${newSearchParams.toString()}`, { scroll: false });
@@ -41,15 +42,15 @@ export function SearchPanel() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col p-6">
       <SearchBar
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         onSearch={handleSearch}
         isLoading={isLoading}
       />
-      <div className="mt-4 flex-grow overflow-auto">
-        <SearchResults results={searchResults} />
+      <div className="mt-6 flex-grow overflow-auto">
+        <SearchResults results={searchResults} hasSearched={hasSearched} />
       </div>
     </div>
   );

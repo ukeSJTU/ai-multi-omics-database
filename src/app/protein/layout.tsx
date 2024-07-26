@@ -13,7 +13,7 @@ export default function Layout({
   return (
     <ResizablePanelGroup direction="horizontal" className="h-screen">
       <ResizablePanel defaultSize={40} minSize={20}>
-        <div className="h-screen overflow-auto">
+        <div className="h-screen overflow-auto bg-gray-50">
           <SearchPanel />
         </div>
       </ResizablePanel>

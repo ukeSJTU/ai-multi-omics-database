@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Search } from "lucide-react";
 import { debounce } from "lodash";
+import { Input } from "@/components/ui/input";
 
 interface SearchBarProps {
   searchTerm: string;
@@ -40,22 +41,14 @@ export function SearchBar({
   }, [isFocused]);
 
   return (
-    <div
-      className={`relative w-full max-w-md mx-auto transition-all duration-300 ease-in-out ${
-        searchTerm ? "mt-4" : "mt-[40vh]"
-      }`}
-    >
-      <div
-        className={`relative flex items-center transition-all duration-300 ease-in-out 
-                    ${isFocused ? "bg-white shadow-lg" : "bg-gray-100"} 
-                    rounded-full overflow-hidden`}
-      >
+    <div className="w-full max-w-md mx-auto">
+      <div className="relative">
         <Search
-          className={`absolute left-3 transition-all duration-300 ease-in-out
-                      ${isFocused ? "text-blue-500" : "text-gray-400"}`}
+          className={`absolute left-3 top-1/2 transform -translate-y-1/2 transition-all duration-300 ease-in-out
+                      ${isFocused ? "text-primary" : "text-gray-400"}`}
           size={20}
         />
-        <input
+        <Input
           ref={inputRef}
           type="text"
           placeholder="Search proteins..."
@@ -63,17 +56,15 @@ export function SearchBar({
           onChange={handleSearchChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className={`w-full py-2 pl-10 pr-4 text-gray-700 bg-transparent outline-none
-                      transition-all duration-300 ease-in-out
-                      ${isFocused ? "pl-12" : "pl-10"}`}
-          // disabled={isLoading}
+          className={`pl-10 pr-4 py-2 w-full transition-all duration-300 ease-in-out
+                      ${isFocused ? "ring-2 ring-primary" : ""}`}
         />
+        {isLoading && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        )}
       </div>
-      {isLoading && (
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      )}
     </div>
   );
 }
