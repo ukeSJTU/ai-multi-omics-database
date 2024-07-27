@@ -2,6 +2,13 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import * as $3Dmol from "3dmol";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProteinViewerProps {
   pdbId: string;
@@ -12,6 +19,8 @@ const ProteinViewer: React.FC<ProteinViewerProps> = ({ pdbId }) => {
   const [viewer, setViewer] = useState<any>(null);
   const [style, setStyle] = useState<string>("cartoon");
   const [colorScheme, setColorScheme] = useState<string>("spectrum");
+  const [error, setError] = useState<string | null>(null);
+  const [pdbData, setPdbData] = useState<string | null>(null);
 
   useEffect(() => {
     if (viewerRef.current && !viewer) {
@@ -20,15 +29,29 @@ const ProteinViewer: React.FC<ProteinViewerProps> = ({ pdbId }) => {
       });
       setViewer(v);
 
-      fetch(`/pdb/1A00.pdb`)
-        .then((response) => response.text())
+      fetch(`/api/protein-info?id=${pdbId}`)
+        .then((response) => response.json())
         .then((data) => {
-          v.addModel(data, "pdb");
-          updateStyle(v, style, colorScheme);
-          v.zoomTo();
-          v.render();
+          if (data.alias) {
+            return fetch(`/pdb/${data.alias}.pdb`);
+          } else {
+            throw new Error("Alias not found for the given pdbId");
+          }
         })
-        .catch((error) => console.error("Error loading PDB file:", error));
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("PDB file not found");
+          }
+          return response.text();
+        })
+        .then((data) => {
+          setPdbData(data);
+          setError(null);
+        })
+        .catch((error) => {
+          console.error("Error loading PDB file:", error);
+          setError(error.message);
+        });
     }
 
     return () => {
@@ -36,77 +59,78 @@ const ProteinViewer: React.FC<ProteinViewerProps> = ({ pdbId }) => {
         viewer.clear();
       }
     };
-  }, [pdbId, viewer, style, colorScheme]);
-  // }, [pdbId]);
+  }, [pdbId, viewer]);
 
   const updateStyle = (v: any, newStyle: string, newColorScheme: string) => {
-    v.setStyle({}, {}); // Clear previous styles
+    if (!v || !pdbData) return;
+
+    v.clear();
+    v.addModel(pdbData, "pdb");
+
     if (newStyle === "cartoon") {
-      v.setStyle(
-        {},
-        { cartoon: { colorscheme: newColorScheme, opacity: 0.8 } }
-      );
-      v.setStyle({ hetflag: false }, { cartoon: { color: newColorScheme } });
-      v.addSurface($3Dmol.SurfaceType.VDW, {
-        opacity: 0.1,
-        color: "white",
-      });
+      v.setStyle({}, { cartoon: { color: newColorScheme } });
     } else if (newStyle === "stick") {
-      v.setStyle({}, { stick: { colorscheme: newColorScheme } });
+      v.setStyle({}, { stick: { color: newColorScheme } });
     }
+
+    v.zoomTo();
     v.render();
   };
 
   useEffect(() => {
-    if (viewer) {
+    if (viewer && pdbData && !error) {
       updateStyle(viewer, style, colorScheme);
     }
-  }, [style, colorScheme, viewer]);
+  }, [style, colorScheme, viewer, pdbData, error]);
 
   return (
-    <div
-      className="protein-viewer-container"
-      style={{
-        width: "600px",
-        margin: "0 auto",
-        border: "1px solid #ccc",
-        borderRadius: "8px",
-        padding: "16px",
-        backgroundColor: "#f9f9f9",
-      }}
-    >
+    <div className="protein-viewer-container w-[600px] mx-auto border border-gray-300 rounded-lg p-4 bg-gray-50">
       <div
         ref={viewerRef}
-        style={{
-          height: "400px",
-          width: "100%",
-          position: "relative",
-          marginBottom: "16px",
-        }}
+        className="h-[400px] w-full relative mb-4"
+        id="viewer"
       />
-      <div
-        className="controls"
-        style={{ display: "flex", justifyContent: "space-between" }}
-      >
-        <div>
-          <label>Style: </label>
-          <select value={style} onChange={(e) => setStyle(e.target.value)}>
-            <option value="cartoon">Cartoon</option>
-            <option value="stick">Stick</option>
-          </select>
+      {error ? (
+        <div className="text-red-500 text-center">
+          {error === "Alias not found for the given pdbId"
+            ? "Protein structure not available for this ID."
+            : "Unable to load protein structure. Please try again later."}
         </div>
-        <div>
-          <label>Color: </label>
-          <select
-            value={colorScheme}
-            onChange={(e) => setColorScheme(e.target.value)}
-          >
-            <option value="spectrum">Spectrum</option>
-            <option value="chainHetatm">Chain</option>
-            <option value="secondary structure">Secondary Structure</option>
-          </select>
+      ) : (
+        <div className="flex justify-between">
+          <div className="flex items-center space-x-2">
+            <label>Style: </label>
+            <Select value={style} onValueChange={setStyle} disabled={!!error}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select style" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cartoon">Cartoon</SelectItem>
+                <SelectItem value="stick">Stick</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center space-x-2">
+            <label>Color: </label>
+            <Select
+              value={colorScheme}
+              onValueChange={setColorScheme}
+              disabled={!!error}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select color scheme" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="spectrum">Spectrum</SelectItem>
+                <SelectItem value="chainHetatm">Chain</SelectItem>
+                <SelectItem value="secondary structure">
+                  Secondary Structure
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
