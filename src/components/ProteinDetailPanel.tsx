@@ -4,8 +4,18 @@
 import { useState, useEffect } from "react";
 import ProteinInfoCard from "@/components/ProteinInfoCard";
 import LinkedProteinsTable from "@/components/LinkedProteinsTable";
-import ProteinViewer from "@/components/ProteinViewer";
-import ProteinRelationshipGraph from "./ProteinRelationGraph";
+import dynamic from "next/dynamic";
+
+const ProteinRelationshipGraph = dynamic(
+  () => import("./ProteinRelationGraph"),
+  {
+    ssr: false,
+  }
+);
+
+const ProteinViewer = dynamic(() => import("./ProteinViewer"), {
+  ssr: false,
+});
 
 async function getProtein(
   id: string,
