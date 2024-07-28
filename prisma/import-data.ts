@@ -11,36 +11,57 @@ const PROTEIN_ENRICHMENT_TERM_FILENAME =
   "9606.protein.enrichment.terms.v12.0.txt";
 const FASTA_FILENAME = "9606.protein.sequences.v12.0.fa";
 const PROTEIN_NETWORK_FILENAME = "9606.protein.links.full.v12.0.txt";
+const PROTEIN_ALIAS_FILENAME = "9606.protein.aliases.v12.0.txt";
 
 async function importProteinInfo() {
   console.log("Importing protein info...");
   // const filePath = path.join(DATA_DIR, PROTEIN_INFO_FILENAME);
   const proteinInfoPath = path.join(DATA_DIR, PROTEIN_INFO_FILENAME);
+  const aliasPath = path.join(DATA_DIR, PROTEIN_ALIAS_FILENAME);
   const fastaPath = path.join(DATA_DIR, FASTA_FILENAME);
-  // First, import basic protein info
-  const fileStream = fs.createReadStream(proteinInfoPath);
-  const rl = readline.createInterface({
-    input: fileStream,
+
+  // First, read aliases into a map
+  const aliasMap = new Map();
+  const aliasStream = fs.createReadStream(aliasPath);
+  const aliasRl = readline.createInterface({
+    input: aliasStream,
+    crlfDelay: Infinity,
+  });
+
+  for await (const line of aliasRl) {
+    if (line.startsWith("#")) continue;
+    const [id, alias] = line.split("\t");
+    if (!aliasMap.has(id)) {
+      aliasMap.set(id, alias);
+    }
+  }
+
+  // Now, import protein info
+  const proteinInfoStream = fs.createReadStream(proteinInfoPath);
+  const proteinInfoRl = readline.createInterface({
+    input: proteinInfoStream,
     crlfDelay: Infinity,
   });
 
   let count = 0;
-  for await (const line of rl) {
+  for await (const line of proteinInfoRl) {
     if (line.startsWith("#")) continue;
-    const [id, name, proteinSize, annotation] = line.split("\t");
+    const [id, preferredName, proteinSize, annotation] = line.split("\t");
+    const alias = aliasMap.get(id) || preferredName; // Use preferred name as fallback if no alias found
+
     await prisma.protein.upsert({
       where: { id },
       update: {
-        name,
-        alias: name,
+        name: preferredName,
+        alias: alias,
         size: proteinSize,
         annotation: annotation,
         fasta_sequence: null,
       },
       create: {
         id,
-        name,
-        alias: name,
+        name: preferredName,
+        alias: alias,
         size: proteinSize,
         annotation: annotation,
         fasta_sequence: null,
