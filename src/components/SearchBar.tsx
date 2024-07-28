@@ -41,7 +41,11 @@ export function SearchBar({
   }, [isFocused]);
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div
+      className={`w-full max-w-md mx-auto transition-all duration-700 ease-in-out ${
+        searchTerm ? "transform -translate-y-1/2" : ""
+      }`}
+    >
       <div className="relative">
         <Search
           className={`absolute left-3 top-1/2 transform -translate-y-1/2 transition-all duration-300 ease-in-out

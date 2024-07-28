@@ -27,11 +27,7 @@ export function SearchResults({ results, hasSearched }: SearchResultsProps) {
   };
 
   if (!hasSearched) {
-    return (
-      <div className="text-center text-gray-500 mt-8">
-        Start typing to search for proteins
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -41,7 +37,7 @@ export function SearchResults({ results, hasSearched }: SearchResultsProps) {
           <ProteinCard protein={protein} />
         </div>
       ))}
-      {results.length === 0 && hasSearched && (
+      {results.length === 0 && (
         <div className="text-center text-gray-500">No results found</div>
       )}
     </div>
