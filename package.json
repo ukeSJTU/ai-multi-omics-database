@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "load-data": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' ./prisma/import-data.ts"
+    "load-data": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' ./prisma/import-data.ts",
+    "save-fig": "node utils/saveProteinImages.js"
   },
   "dependencies": {
     "@prisma/client": "^5.16.2",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-hover-card": "^1.1.1",
+    "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.2.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-switch": "^1.1.0",
@@ -30,6 +32,7 @@
     "lodash": "^4.17.21",
     "lucide-react": "^0.408.0",
     "next": "14.2.5",
+    "puppeteer": "^22.14.0",
     "react": "^18",
     "react-dom": "^18",
     "react-force-graph": "^1.44.4",
