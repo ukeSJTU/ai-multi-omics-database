@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import fs from "fs";
+// import { createReadStream } from "fs";
 import readline from "readline";
 import path from "path";
 
@@ -15,25 +16,22 @@ const PROTEIN_ALIAS_FILENAME = "9606.protein.aliases.v12.0.txt";
 
 async function importProteinInfo() {
   console.log("Importing protein info...");
-  // const filePath = path.join(DATA_DIR, PROTEIN_INFO_FILENAME);
   const proteinInfoPath = path.join(DATA_DIR, PROTEIN_INFO_FILENAME);
-  const aliasPath = path.join(DATA_DIR, PROTEIN_ALIAS_FILENAME);
+  const pdbIndexPath = path.join(DATA_DIR, "pdb_index.txt");
   const fastaPath = path.join(DATA_DIR, FASTA_FILENAME);
 
-  // First, read aliases into a map
-  const aliasMap = new Map();
-  const aliasStream = fs.createReadStream(aliasPath);
-  const aliasRl = readline.createInterface({
-    input: aliasStream,
+  // Read aliases from pdb_index.txt into a map
+  const aliasMap = new Map<string, string>();
+  const pdbIndexStream = fs.createReadStream(pdbIndexPath);
+  const pdbIndexRl = readline.createInterface({
+    input: pdbIndexStream,
     crlfDelay: Infinity,
   });
 
-  for await (const line of aliasRl) {
+  for await (const line of pdbIndexRl) {
     if (line.startsWith("#")) continue;
-    const [id, alias] = line.split("\t");
-    if (!aliasMap.has(id)) {
-      aliasMap.set(id, alias);
-    }
+    const [id, alias, source] = line.split(" ");
+    aliasMap.set(id, alias);
   }
 
   // Now, import protein info
@@ -47,6 +45,8 @@ async function importProteinInfo() {
   for await (const line of proteinInfoRl) {
     if (line.startsWith("#")) continue;
     const [id, preferredName, proteinSize, annotation] = line.split("\t");
+
+    // Get the alias from the aliasMap
     const alias = aliasMap.get(id) || preferredName; // Use preferred name as fallback if no alias found
 
     await prisma.protein.upsert({
@@ -73,7 +73,6 @@ async function importProteinInfo() {
   console.log(`Finished importing ${count} proteins`);
 
   // Now, import FASTA sequences
-  // ... (previous code remains the same)
 
   console.log("Importing FASTA sequences...");
   const fastaStream = fs.createReadStream(fastaPath);
