@@ -1,4 +1,3 @@
-// components/ProteinDetailPanel.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -63,7 +62,9 @@ export function ProteinDetailPanel({ proteinId }: { proteinId: string }) {
           <h2 className="text-2xl font-bold mb-4">
             Protein Relationship Graph
           </h2>
-          <ProteinRelationshipGraph centerId={proteinId} topK={5} />
+          <div className="h-[800px]">
+            <ProteinRelationshipGraph centerId={proteinId} topK={5} />
+          </div>
         </section>
         <section className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-2xl font-bold mb-4">Protein Structure</h2>
