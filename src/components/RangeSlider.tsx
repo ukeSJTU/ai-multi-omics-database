@@ -70,22 +70,11 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
                 >
                   {children}
                 </div>
-                {ticks.map((tick, index) => (
-                  <div
-                    key={index}
-                    className="absolute bottom-0 h-2 w-0.5 bg-gray-400"
-                    style={{
-                      left: `${((tick - min) / (max - min)) * 100}%`,
-                      transform: "translateX(-50%)",
-                    }}
-                  />
-                ))}
               </div>
             )}
             renderThumb={({ props }) => (
               <div
                 {...props}
-                key={props.key}
                 className="h-4 w-4 rounded-full bg-white border-2 border-black shadow focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                 style={{
                   ...props.style,
@@ -94,6 +83,18 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
               />
             )}
           />
+          <div className="relative w-full h-1">
+            {ticks.map((tick, index) => (
+              <div
+                key={index}
+                className="absolute h-2 w-0.5 bg-gray-400"
+                style={{
+                  left: `${((tick - min) / (max - min)) * 100}%`,
+                  transform: "translateX(-50%)",
+                }}
+              />
+            ))}
+          </div>
         </div>
         <div className="flex items-center space-x-1">
           <Button
