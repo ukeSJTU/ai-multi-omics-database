@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { ForceGraph2D, ForceGraph3D } from "react-force-graph";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
@@ -72,6 +78,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     nodes: [],
     links: [],
   });
+  const imageCache = useMemo(() => new Map<string, HTMLImageElement>(), []);
 
   // State to store API data
   const [proteinData, setProteinData] = useState<{
@@ -273,12 +280,37 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
       const proteinId = node.name.split(" ")[1];
 
       // Load and draw the image
-      const img = new Image(size, size);
-      img.src = `/img/name/${proteinId}.png`; // Replace with correct image path later
-      ctx.save();
-      ctx.clip();
-      ctx.drawImage(img, x, y, size, size);
-      ctx.restore();
+      let img = imageCache.get(proteinId);
+      if (!img) {
+        img = new Image();
+        img.src = `/img/name/${proteinId}.png`;
+        imageCache.set(proteinId, img);
+      }
+
+      if (img.complete && img.naturalHeight !== 0) {
+        ctx.save();
+        ctx.clip();
+        ctx.drawImage(img, x, y, size, size);
+        ctx.restore();
+      } else {
+        // 绘制默认状态
+        ctx.fillStyle = node.color;
+      }
+
+      // img.onload = () => {
+      //   ctx.save();
+      //   ctx.clip();
+      //   ctx.drawImage(img, x, y, size, size);
+      //   ctx.restore();
+      // };
+      // img.onerror = () => {
+      //   ctx.fillStyle = node.color;
+      // };
+      // img.src = `/img/name/${proteinId}.png`; // Replace with correct image path later
+      // ctx.save();
+      // ctx.clip();
+      // ctx.drawImage(img, x, y, size, size);
+      // ctx.restore();
 
       // Draw label if needed
       if (showLabels) {
@@ -359,7 +391,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
       {/* Main content area */}
       <div className="flex-grow flex">
         <ResizablePanelGroup direction="horizontal" className="flex-grow">
-          <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={50}>
             <div className="p-4 h-full overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4">Controls</h3>
 
@@ -424,7 +456,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={70} minSize={50}>
+          <ResizablePanel defaultSize={80} minSize={50}>
             {/* Graph container */}
             <div className="h-[calc(100%-80px)] w-full" ref={graphContainerRef}>
               {mode === "2d" ? (
@@ -439,7 +471,10 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
                   linkWidth={1}
                   linkDirectionalParticles={emitParticles ? 4 : 0}
                   linkDirectionalParticleSpeed={(d: any) => d.value * 0.001}
-                  onNodeClick={handleClick}
+                  // onNodeClick={handleClick}
+                  onNodeClick={(node) => {
+                    alert(`Clicked on protein: ${node.name}`);
+                  }}
                   nodeCanvasObject={node2D}
                   nodePointerAreaPaint={(node, color, ctx) => {
                     ctx.fillStyle = color;
