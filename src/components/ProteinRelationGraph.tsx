@@ -464,16 +464,23 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
               </div>
 
               {/* Focus on click toggle */}
-              <div className="flex items-center justify-between mb-4">
-                <label htmlFor="focus-on-click" className="text-sm">
-                  <Focus className="h-4 w-4 inline mr-2" />
-                  Focus on Click
-                </label>
-                <Switch
-                  checked={focusOnClick}
-                  onCheckedChange={setFocusOnClick}
-                  id="focus-on-click"
-                />
+              <div
+                className={`${
+                  mode === "2d" ? "opacity-50 pointer-events-none" : ""
+                }`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <label htmlFor="focus-on-click" className="text-sm">
+                    <Focus className="h-4 w-4 inline mr-2" />
+                    Focus on Click
+                  </label>
+                  <Switch
+                    checked={focusOnClick}
+                    onCheckedChange={setFocusOnClick}
+                    id="focus-on-click"
+                    disabled={mode === "2d"}
+                  />
+                </div>
               </div>
 
               {/* Camera orbit controls (3D only) */}
