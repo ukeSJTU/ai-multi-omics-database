@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import * as THREE from "three";
 import SpriteText from "three-spritetext";
+import { GraphDataProteinCard } from "./ProteinCard";
 
 // Define the structure for a node in the graph
 interface Node {
@@ -88,6 +89,10 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     proteins: string[];
     values: number[];
   } | null>(null);
+
+  const [selectedProtein, setSelectedProtein] = useState<string | null>(null);
+  const [proteinInfo, setProteinInfo] = useState<any | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Effect to fetch data from API when centerId changes
   useEffect(() => {
@@ -170,9 +175,17 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     [proteinData, centerId, updateGraphData]
   );
 
-  // const handleScoreRangeChange = useCallback((newValues: number[]) => {
-  //   setScoreRange(newValues);
-  // }, []);
+  const fetchProteinInfo = useCallback(async (proteinId: string) => {
+    try {
+      const response = await fetch(`/api/protein/${proteinId}`);
+      if (!response.ok) throw new Error("Failed to fetch protein info");
+      const data = await response.json();
+      setProteinInfo(data);
+    } catch (error) {
+      console.error("Error fetching protein info:", error);
+      setProteinInfo(null);
+    }
+  }, []);
 
   const findNearestScore = useCallback(
     (target: number, direction: "left" | "right"): number => {
@@ -247,6 +260,11 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     setOrbitSpeed(value[0]);
   };
 
+  const handleCloseCard = useCallback(() => {
+    setSelectedProtein(null);
+    setProteinInfo(null);
+  }, []);
+
   // Focus on click functionality
   const handleClick = useCallback(
     (node: any) => {
@@ -263,9 +281,33 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
           3000
         );
       }
+
+      const proteinId = node.id;
+      if (selectedProtein === proteinId) {
+        // 如果点击的是当前选中的蛋白质，关闭卡片
+        handleCloseCard();
+      } else {
+        // 否则，设置新的选中蛋白质并获取信息
+        setSelectedProtein(proteinId);
+        fetchProteinInfo(proteinId);
+      }
     },
-    [focusOnClick, mode]
+    [focusOnClick, mode, fetchProteinInfo, selectedProtein, handleCloseCard]
   );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(event.target as any)) {
+        setSelectedProtein(null);
+        setProteinInfo(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Effect to update dimensions on window resize
   useEffect(() => {
@@ -444,7 +486,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
       </div>
 
       {/* Main content area */}
-      <div className="flex-grow flex">
+      <div className="flex-grow flex relative">
         <ResizablePanelGroup direction="horizontal" className="flex-grow">
           <ResizablePanel defaultSize={20} minSize={15} maxSize={50}>
             <div className="p-4 h-full overflow-y-auto">
@@ -533,10 +575,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
                   linkWidth={1}
                   linkDirectionalParticles={emitParticles ? 4 : 0}
                   linkDirectionalParticleSpeed={(d: any) => d.value * 0.001}
-                  // onNodeClick={handleClick}
-                  // onNodeClick={(node) => {
-                  //   alert(`Clicked on protein: ${node.name}`);
-                  // }}
+                  onNodeClick={handleClick}
                   onLinkClick={(link) => graphRef.current.emitParticle(link)}
                   nodeCanvasObject={node2D}
                   nodePointerAreaPaint={(node, color, ctx) => {
@@ -569,6 +608,22 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
+        {/* Protein detailed data card */}
+        {selectedProtein && proteinInfo && (
+          <div
+            ref={cardRef}
+            className="absolute top-4 right-4 z-10"
+            // style={{
+            //   maxHeight: "calc(100% - 2rem)",
+            //   overflowY: "auto",
+            // }}
+          >
+            <GraphDataProteinCard
+              protein={proteinInfo}
+              onClose={handleCloseCard}
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom RangeSlider */}
