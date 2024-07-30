@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ProteinCard } from "@/components/ProteinCard";
+import { SearchResultProteinCard } from "@/components/ProteinCard";
 
 interface Protein {
   id: string;
@@ -34,7 +34,7 @@ export function SearchResults({ results, hasSearched }: SearchResultsProps) {
     <div className="grid grid-cols-1 gap-4">
       {results.map((protein: Protein) => (
         <div key={protein.id} onClick={() => handleProteinClick(protein.id)}>
-          <ProteinCard protein={protein} />
+          <SearchResultProteinCard protein={protein} />
         </div>
       ))}
       {results.length === 0 && (
