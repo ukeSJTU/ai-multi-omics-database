@@ -72,8 +72,11 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
   const graphContainerRef = useRef<HTMLDivElement>(null);
 
   // State for managing displayed nodes and graph data
-  const [displayedNodes, setDisplayedNodes] = useState(topK);
-  const [scoreRange, setScoreRange] = useState<number[]>([0, 1000]);
+  const [displayedNodes, setDisplayedNodes] = useState<string[]>([]);
+  const [scoreRange, setScoreRange] = useState<[number, number]>([0, 1000]);
+  const [fullScoreRange, setFullScoreRange] = useState<[number, number]>([
+    0, 1000,
+  ]);
   const [graphData, setGraphData] = useState<GraphData>({
     nodes: [],
     links: [],
@@ -96,23 +99,80 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
         if (!response.ok) throw new Error("Failed to fetch");
         const data = await response.json();
         setProteinData(data);
-        // Initialize score range based on actual data
-        if (data.values.length > 0) {
-          const minScore = Math.min(...data.values);
-          const maxScore = Math.max(...data.values);
-          setScoreRange([minScore, maxScore]);
-        }
+
+        // 计算完整的分数范围
+        const minScore = Math.min(...data.values);
+        const maxScore = Math.max(...data.values);
+        setFullScoreRange([minScore, maxScore]);
+
+        // 选择 topK 个 links
+        const sortedIndices = data.values
+          .map((value, index) => ({
+            value,
+            index,
+          }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, topK)
+          .map((item) => item.index);
+
+        const topKProteins = sortedIndices.map((index) => data.proteins[index]);
+        const topKValues = sortedIndices.map((index) => data.values[index]);
+
+        setDisplayedNodes([centerId, ...topKProteins]);
+        setScoreRange([Math.min(...topKValues), Math.max(...topKValues)]);
+
+        // 更新图数据
+        updateGraphData(data, [centerId, ...topKProteins], topKValues);
       } catch (error) {
         console.error("Error fetching protein data:", error);
       }
     };
 
     fetchData();
-  }, [centerId]);
+  }, [centerId, topK]);
 
-  const handleScoreRangeChange = useCallback((newValues: number[]) => {
-    setScoreRange(newValues);
-  }, []);
+  const updateGraphData = useCallback(
+    (data: any, proteins: string[], values: number[]) => {
+      const nodes: Node[] = proteins.map((id) => ({
+        id,
+        name: `Protein ${id}`,
+      }));
+      const links: Link[] = proteins.slice(1).map((id, index) => ({
+        source: centerId,
+        target: id,
+        value: values[index],
+      }));
+
+      setGraphData({ nodes, links });
+    },
+    [centerId]
+  );
+
+  const handleScoreRangeChange = useCallback(
+    (newValues: [number, number]) => {
+      setScoreRange(newValues);
+      if (proteinData) {
+        const filteredProteins = proteinData.proteins.filter(
+          (_, index) =>
+            proteinData.values[index] >= newValues[0] &&
+            proteinData.values[index] <= newValues[1]
+        );
+        setDisplayedNodes([centerId, ...filteredProteins]);
+        updateGraphData(
+          proteinData,
+          [centerId, ...filteredProteins],
+          filteredProteins.map(
+            (id) => proteinData.values[proteinData.proteins.indexOf(id)]
+          )
+        );
+      }
+    },
+    [proteinData, centerId, updateGraphData]
+  );
+
+  // const handleScoreRangeChange = useCallback((newValues: number[]) => {
+  //   setScoreRange(newValues);
+  // }, []);
 
   const findNearestScore = useCallback(
     (target: number, direction: "left" | "right"): number => {
@@ -175,16 +235,6 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
 
     setGraphData({ nodes, links });
   }, [centerId, proteinData, scoreRange]);
-
-  // Handler for changing the number of displayed nodes
-  const handleNodeChange = (change: number) => {
-    setDisplayedNodes((prev) =>
-      Math.max(
-        2,
-        Math.min(prev + change, (proteinData?.proteins.length || 0) + 1)
-      )
-    );
-  };
 
   // Handler for toggling 2D/3D mode
   const toggleMode = () => {
@@ -257,29 +307,15 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
     }
   }, [cameraOrbit, mode, orbitSpeed]);
 
-  const nodeSize = 50;
+  const defaultNodeSize = 30;
+  const largeNodeSize = 50;
 
   const node2D = useCallback(
     (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-      const size = nodeSize / globalScale;
-      const x = node.x - size / 2;
-      const y = node.y - size / 2;
-
-      // Draw circular background
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, size / 2, 0, 2 * Math.PI);
-      ctx.fillStyle = `${node.color}33`; // Light version of node color
-      ctx.fill();
-
-      // Draw border
-      ctx.strokeStyle = node.color;
-      ctx.lineWidth = 2 / globalScale;
-      ctx.stroke();
-
       // Extract protein ID from node name
       const proteinId = node.name.split(" ")[1];
 
-      // Load and draw the image
+      // Load the image
       let img = imageCache.get(proteinId);
       if (!img) {
         img = new Image();
@@ -287,30 +323,32 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
         imageCache.set(proteinId, img);
       }
 
+      const nodeSize =
+        img.complete && img.naturalHeight !== 0
+          ? largeNodeSize
+          : defaultNodeSize;
+      const size = nodeSize / globalScale;
+      const x = node.x - size / 2;
+      const y = node.y - size / 2;
+
+      // Draw circular background
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, size / 2, 0, 2 * Math.PI);
+
+      // Draw border
+      ctx.strokeStyle = node.color;
+      ctx.lineWidth = 2 / globalScale;
+      ctx.stroke();
+
       if (img.complete && img.naturalHeight !== 0) {
         ctx.save();
         ctx.clip();
         ctx.drawImage(img, x, y, size, size);
         ctx.restore();
       } else {
-        // 绘制默认状态
-        ctx.fillStyle = node.color;
+        ctx.fillStyle = `${node.color}33`; // Light version of node color
+        ctx.fill();
       }
-
-      // img.onload = () => {
-      //   ctx.save();
-      //   ctx.clip();
-      //   ctx.drawImage(img, x, y, size, size);
-      //   ctx.restore();
-      // };
-      // img.onerror = () => {
-      //   ctx.fillStyle = node.color;
-      // };
-      // img.src = `/img/name/${proteinId}.png`; // Replace with correct image path later
-      // ctx.save();
-      // ctx.clip();
-      // ctx.drawImage(img, x, y, size, size);
-      // ctx.restore();
 
       // Draw label if needed
       if (showLabels) {
@@ -322,7 +360,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
         ctx.fillText(label, node.x, node.y + size / 2 + 2 / globalScale);
       }
     },
-    [showLabels, nodeSize]
+    [showLabels, imageCache]
   );
 
   const node3D = useCallback(
@@ -332,36 +370,61 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
       // Extract protein ID from node name
       const proteinId = node.name.split(" ")[1];
 
-      // Create sprite for the image
-      const texture = new THREE.TextureLoader().load(
-        `/img/name/${proteinId}.png`
-      );
-      const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-      const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(nodeSize, nodeSize, 1);
-      group.add(sprite);
-
-      // Create circular background
-      const bgGeometry = new THREE.CircleGeometry(nodeSize / 2, 32);
-      const bgMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(node.color).setHex(0x333333),
+      // Create a sphere for the node
+      const geometry = new THREE.SphereGeometry(1, 32, 32);
+      const material = new THREE.MeshPhongMaterial({
+        color: node.color,
+        transparent: true,
+        opacity: 0.7,
       });
-      const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
-      bgMesh.position.set(0, 0, -1); // Place it behind the sprite
-      group.add(bgMesh);
+      const sphere = new THREE.Mesh(geometry, material);
+      group.add(sphere);
+
+      // Load texture for the protein image
+      const loader = new THREE.TextureLoader();
+      loader.load(
+        `/img/name/${proteinId}.png`,
+        (texture) => {
+          const imgMaterial = new THREE.MeshPhongMaterial({
+            map: texture,
+            transparent: true,
+            side: THREE.DoubleSide,
+          });
+          const imgPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(2, 2),
+            imgMaterial
+          );
+          imgPlane.scale.set(largeNodeSize / 30, largeNodeSize / 30, 1);
+          group.add(imgPlane);
+          sphere.scale.set(
+            largeNodeSize / 30,
+            largeNodeSize / 30,
+            largeNodeSize / 30
+          );
+        },
+        undefined,
+        () => {
+          // If image fails to load, just scale the sphere
+          sphere.scale.set(
+            defaultNodeSize / 30,
+            defaultNodeSize / 30,
+            defaultNodeSize / 30
+          );
+        }
+      );
 
       // Add label if needed
       if (showLabels) {
         const label = new SpriteText(node.name);
         label.color = node.color;
         label.textHeight = 8;
-        // label.position.set(0, -nodeSize / 2 - 5, 0);
+        label.position.set(0, 1.5, 0);
         group.add(label);
       }
 
       return group;
     },
-    [showLabels, nodeSize]
+    [showLabels]
   );
 
   return (
@@ -383,8 +446,8 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
           </Button>
         </div>
         <div className="text-sm text-gray-600">
-          {graphData.nodes.length}/{proteinData?.proteins.length || 0} nodes
-          displayed
+          {displayedNodes.length} out of {proteinData?.proteins.length || 0}{" "}
+          nodes displayed
         </div>
       </div>
 
@@ -472,14 +535,15 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
                   linkDirectionalParticles={emitParticles ? 4 : 0}
                   linkDirectionalParticleSpeed={(d: any) => d.value * 0.001}
                   // onNodeClick={handleClick}
-                  onNodeClick={(node) => {
-                    alert(`Clicked on protein: ${node.name}`);
-                  }}
+                  // onNodeClick={(node) => {
+                  //   alert(`Clicked on protein: ${node.name}`);
+                  // }}
+                  onLinkClick={(link) => graphRef.current.emitParticle(link)}
                   nodeCanvasObject={node2D}
                   nodePointerAreaPaint={(node, color, ctx) => {
                     ctx.fillStyle = color;
                     ctx.beginPath();
-                    ctx.arc(node.x, node.y, nodeSize / 2, 0, 2 * Math.PI);
+                    ctx.arc(node.x, node.y, largeNodeSize / 2, 0, 2 * Math.PI);
                     ctx.fill();
                   }}
                 />
