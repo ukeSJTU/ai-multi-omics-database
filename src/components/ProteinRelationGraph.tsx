@@ -230,20 +230,12 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
       value: proteinData.values[index],
     }));
 
-    console.log("Nodes:", nodes);
-    console.log("Links:", links);
-
     setGraphData({ nodes, links });
   }, [centerId, proteinData, scoreRange]);
 
   // Handler for toggling 2D/3D mode
   const toggleMode = () => {
     setMode((prevMode) => (prevMode === "2d" ? "3d" : "2d"));
-  };
-
-  // Handler for toggling labels
-  const handleLabelsToggle = (value: string) => {
-    setShowLabels(value === "show");
   };
 
   const toggleLabels = () => {
