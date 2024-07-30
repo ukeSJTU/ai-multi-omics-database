@@ -49,7 +49,7 @@ export function GraphDataProteinCard({ protein, onClose }) {
   return (
     <Card className="w-80 shadow-lg">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">
+        <CardTitle className="font-bold">
           {protein.name || protein.id}
         </CardTitle>
         <Button variant="ghost" size="sm" onClick={onClose}>
