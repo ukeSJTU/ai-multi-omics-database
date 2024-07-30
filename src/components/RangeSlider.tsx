@@ -7,7 +7,7 @@ interface RangeSliderProps {
   min: number;
   max: number;
   values: number[];
-  onChange: (values: number[]) => void;
+  onChange: (values: [number, number]) => void;
   ticks: number[];
   onStepLeft: (isMin: boolean) => void;
   onStepRight: (isMin: boolean) => void;
@@ -49,7 +49,7 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
             min={min}
             max={max}
             values={values}
-            onChange={onChange}
+            onChange={onChange as (values: number[]) => void}
             renderTrack={({ props, children }) => (
               <div
                 onMouseDown={props.onMouseDown}
