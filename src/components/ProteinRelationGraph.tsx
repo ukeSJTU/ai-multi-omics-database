@@ -389,18 +389,18 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
           imgPlane.scale.set(largeNodeSize / 30, largeNodeSize / 30, 1);
           group.add(imgPlane);
           sphere.scale.set(
-            largeNodeSize / 30,
-            largeNodeSize / 30,
-            largeNodeSize / 30
+            largeNodeSize / 10,
+            largeNodeSize / 10,
+            largeNodeSize / 10
           );
         },
         undefined,
         () => {
           // If image fails to load, just scale the sphere
           sphere.scale.set(
-            defaultNodeSize / 30,
-            defaultNodeSize / 30,
-            defaultNodeSize / 30
+            defaultNodeSize / 10,
+            defaultNodeSize / 10,
+            defaultNodeSize / 10
           );
         }
       );
@@ -409,7 +409,7 @@ const ProteinRelationshipGraph: React.FC<ProteinRelationshipGraphProps> = ({
       if (showLabels) {
         const label = new SpriteText(node.name);
         label.color = node.color;
-        label.textHeight = 8;
+        label.textHeight = 4;
         label.position.set(0, 1.5, 0);
         group.add(label);
       }
