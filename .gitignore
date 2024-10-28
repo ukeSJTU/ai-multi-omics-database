@@ -4,6 +4,9 @@
 *.pdb
 /public/pdb
 
+# structure images
+/public/img
+
 # dependencies
 /node_modules
 /.pnp
