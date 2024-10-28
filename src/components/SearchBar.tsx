@@ -55,7 +55,7 @@ export function SearchBar({
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Search proteins..."
+          placeholder="搜索基因/蛋白质"
           value={searchTerm}
           onChange={handleSearchChange}
           onFocus={() => setIsFocused(true)}

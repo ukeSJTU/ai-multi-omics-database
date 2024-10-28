@@ -49,6 +49,10 @@ export function SearchPanel() {
     }
   }, [searchTerm]);
 
+  const handleSwitchToFaiss = () => {
+    router.push("/search");
+  };
+
   return (
     <div
       className={`h-full flex flex-col transition-all duration-700 ease-in-out px-4 ${
@@ -75,6 +79,14 @@ export function SearchPanel() {
         {searchTerm && (
           <SearchResults results={searchResults} hasSearched={hasSearched} />
         )}
+      </div>
+      <div className="mt-4 flex justify-center">
+        <button
+          onClick={handleSwitchToFaiss}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+        >
+          切换到 FAISS 搜索
+        </button>
       </div>
     </div>
   );

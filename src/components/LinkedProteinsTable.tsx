@@ -1,17 +1,28 @@
 "use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
+  getPaginationRowModel,
+  getFilteredRowModel,
   flexRender,
   ColumnDef,
   SortingState,
-} from '@tanstack/react-table';
-import Link from 'next/link';
+} from "@tanstack/react-table";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 type LinkedProtein = {
   id: number;
@@ -20,26 +31,29 @@ type LinkedProtein = {
   linkedProtein: {
     name: string;
     size: string | null;
-    // annotation: string | null;
+    annotation: string | null;
   };
 };
 
 type LinkedProteinsTableProps = {
   links: LinkedProtein[];
+  totalLinks: number;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-  onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
+  onSortChange: (sortBy: string, sortOrder: "asc" | "desc") => void;
 };
 
-export default function LinkedProteinsTable({
+export default function LinkedProteinsTableLinkedProteinsTable({
   links,
+  totalLinks,
   currentPage,
   totalPages,
   onPageChange,
   onSortChange,
 }: LinkedProteinsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState("");
 
   const columns: ColumnDef<LinkedProtein>[] = [
     {
@@ -47,14 +61,18 @@ export default function LinkedProteinsTable({
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent"
         >
           ID
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      accessorKey: 'linkedProteinId',
+      accessorKey: "linkedProteinId",
       cell: ({ row }) => (
-        <Link href={`/protein/${row.original.linkedProteinId}`} className="text-blue-500 hover:underline">
+        <Link
+          href={`/protein/${row.original.linkedProteinId}`}
+          className="text-primary hover:underline"
+        >
           {row.original.linkedProteinId}
         </Link>
       ),
@@ -64,16 +82,29 @@ export default function LinkedProteinsTable({
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent"
         >
           Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      accessorKey: 'linkedProtein.name',
+      accessorKey: "linkedProtein.name",
     },
     {
-      header: 'Size',
-      accessorKey: 'linkedProtein.size',
+      header: "Size",
+      accessorKey: "linkedProtein.size",
+    },
+    {
+      header: "Annotation",
+      accessorKey: "linkedProtein.annotation",
+      cell: ({ row }) => (
+        <div
+          className="max-w-xs truncate"
+          title={row.original.linkedProtein.annotation || ""}
+        >
+          {row.original.linkedProtein.annotation}
+        </div>
+      ),
     },
   ];
 
@@ -82,59 +113,109 @@ export default function LinkedProteinsTable({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
+    getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: (updater) => {
+      const newSorting =
+        typeof updater === "function" ? updater(sorting) : updater;
+      setSorting(newSorting);
+      if (newSorting.length > 0) {
+        onSortChange(newSorting[0].id, newSorting[0].desc ? "desc" : "asc");
+      }
+    },
+    onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
+      globalFilter,
     },
+    manualPagination: true,
+    pageCount: totalPages,
   });
 
   return (
-    <div className="p-2">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+    <div className="space-y-4">
+      <Input
+        placeholder="Search all columns..."
+        value={globalFilter ?? ""}
+        onChange={(event) => setGlobalFilter(event.target.value)}
+        className="max-w-sm"
+      />
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
                 >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="mt-4 flex items-center justify-between">
-        <Button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-        >
-          Previous
-        </Button>
-        <span className="text-sm text-gray-700">
-          Page {currentPage} of {totalPages}
-        </span>
-        <Button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-        >
-          Next
-        </Button>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="flex items-center justify-between">
+        {/* <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div> */}
+        <div className="flex-1 text-sm text-muted-foreground">
+          Showing {links.length} of {totalLinks} results
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span>
+            {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

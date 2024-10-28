@@ -52,6 +52,18 @@ export function ProteinDetailPanel({ proteinId }: { proteinId: string }) {
     fetchProtein();
   }, [proteinId, currentPage, sortBy, sortOrder]);
 
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleSortChange = (
+    newSortBy: string,
+    newSortOrder: "asc" | "desc"
+  ) => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+  };
+
   if (!protein) return <div>Loading...</div>;
 
   return (
@@ -60,7 +72,8 @@ export function ProteinDetailPanel({ proteinId }: { proteinId: string }) {
         <ProteinInfoCard protein={protein} />
         <section className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-2xl font-bold mb-4">
-            Protein Relationship Graph
+            {/* Protein Relationship Graph */}
+            基因/蛋白关联图
           </h2>
           <div className="h-[800px]">
             <ProteinRelationshipGraph centerId={proteinId} topK={5} />
@@ -72,7 +85,14 @@ export function ProteinDetailPanel({ proteinId }: { proteinId: string }) {
         </section>
         <section className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-2xl font-bold mb-4">Linked Proteins</h2>
-          <LinkedProteinsTable links={protein.ProteinLinks} />
+          <LinkedProteinsTable
+            links={protein.ProteinLinks}
+            totalLinks={protein.totalLinks}
+            currentPage={protein.currentPage}
+            totalPages={protein.totalPages}
+            onPageChange={handlePageChange}
+            onSortChange={handleSortChange}
+          />
         </section>
       </div>
     </div>
